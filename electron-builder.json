@@ -1,0 +1,20 @@
+{
+  "appId": "com.daily-summary-agent.app",
+  "productName": "Daily Summary Agent",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**",
+    "electron/**",
+    "src/**",
+    "package.json"
+  ],
+  "win": {
+    "target": ["nsis"]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

@@ -228,6 +228,16 @@ h3 {
   width: auto;
 }
 
+.path-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.path-picker-row button {
+  white-space: nowrap;
+}
+
 .loading {
   display: grid;
   min-height: 100vh;

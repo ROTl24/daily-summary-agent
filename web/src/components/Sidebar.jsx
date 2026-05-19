@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 
+async function chooseDirectory() {
+  if (typeof window === "undefined" || !window.dailySummary?.chooseDirectory) {
+    return "";
+  }
+
+  return window.dailySummary.chooseDirectory();
+}
+
 export default function Sidebar({
   config,
   onChange,
@@ -101,10 +109,23 @@ export default function Sidebar({
 
       <label>
         日报输出目录
-        <input
-          value={config.outputDirectory || ""}
-          onChange={(event) => updateField("outputDirectory", event.target.value)}
-        />
+        <div className="path-picker-row">
+          <input
+            value={config.outputDirectory || ""}
+            onChange={(event) => updateField("outputDirectory", event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              const directory = await chooseDirectory();
+              if (directory) {
+                updateField("outputDirectory", directory);
+              }
+            }}
+          >
+            选择
+          </button>
+        </div>
       </label>
 
       <label className="checkbox-row">
@@ -130,10 +151,23 @@ export default function Sidebar({
           <article className="repository-card" key={index}>
             <label>
               仓库路径
-              <input
-                value={repository.path || ""}
-                onChange={(event) => updateRepository(index, { path: event.target.value })}
-              />
+              <div className="path-picker-row">
+                <input
+                  value={repository.path || ""}
+                  onChange={(event) => updateRepository(index, { path: event.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const directory = await chooseDirectory();
+                    if (directory) {
+                      updateRepository(index, { path: directory });
+                    }
+                  }}
+                >
+                  选择文件夹
+                </button>
+              </div>
             </label>
             <label>
               业务名称
