@@ -5,8 +5,8 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
-const ignoredDirectories = new Set([".git", "node_modules", "reports"]);
-const checkedExtensions = new Set([".js", ".mjs"]);
+const ignoredDirectories = new Set([".git", "node_modules", "reports", "dist", ".superpowers"]);
+const checkedExtensions = new Set([".js", ".mjs", ".cjs"]);
 
 async function listJavaScriptFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
