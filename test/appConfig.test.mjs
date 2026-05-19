@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -84,6 +84,23 @@ test("saveAppConfig persists normalized repositories and output directory", asyn
   assert.equal(saved.repositories[0].businessName, "AI 电商详情图生成平台");
 });
 
+test("saveAppConfig creates private config directory and file where permissions are supported", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "daily-config-"));
+  const configPath = path.join(root, "DailySummaryAgent", "config.json");
+
+  await saveAppConfig(defaultConfig(), { configPath });
+
+  if (process.platform !== "win32") {
+    assert.equal((await stat(path.dirname(configPath))).mode & 0o777, 0o700);
+    assert.equal((await stat(configPath)).mode & 0o777, 0o600);
+    return;
+  }
+
+  const source = await readFile(new URL("../src/appConfig.mjs", import.meta.url), "utf8");
+  assert.match(source, /mode:\s*0o700/);
+  assert.match(source, /mode:\s*0o600/);
+});
+
 test("validateAppConfig rejects repositories without keywords", () => {
   assert.throws(
     () =>
@@ -115,4 +132,20 @@ test("validateAppConfig rejects repositories without businessName", () => {
       }),
     /businessName/,
   );
+});
+
+test("validateAppConfig rejects non-boolean codexEnabled values", () => {
+  assert.throws(
+    () =>
+      validateAppConfig({
+        ...defaultConfig(),
+        codexEnabled: "true",
+      }),
+    /codexEnabled/,
+  );
+});
+
+test("validateAppConfig rejects non-object root config values", () => {
+  assert.throws(() => validateAppConfig(null), /config/);
+  assert.throws(() => validateAppConfig([]), /config/);
 });

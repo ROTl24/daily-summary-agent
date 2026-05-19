@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -41,23 +41,49 @@ export async function loadAppConfig({ configPath = getConfigPath() } = {}) {
 
 export async function saveAppConfig(config, { configPath = getConfigPath() } = {}) {
   const normalized = validateAppConfig(config);
-  await mkdir(path.dirname(configPath), { recursive: true });
-  await writeFile(configPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  const configDirectory = path.dirname(configPath);
+  await mkdir(configDirectory, { recursive: true, mode: 0o700 });
+  await applyMode(configDirectory, 0o700);
+  await writeFile(configPath, `${JSON.stringify(normalized, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  await applyMode(configPath, 0o600);
   return normalized;
 }
 
 export function validateAppConfig(value) {
+  if (!isConfigObject(value)) {
+    throw new Error("config must be an object.");
+  }
+
   const config = {
     ...defaultConfig(),
-    ...(value || {}),
+    ...value,
   };
 
   return {
     deepSeekApiKey: readString(config.deepSeekApiKey, "deepSeekApiKey"),
     outputDirectory: readRequiredString(config.outputDirectory, "outputDirectory"),
-    codexEnabled: Boolean(config.codexEnabled),
+    codexEnabled: readBoolean(config.codexEnabled, "codexEnabled"),
     repositories: readRepositories(config.repositories),
   };
+}
+
+async function applyMode(targetPath, mode) {
+  try {
+    await chmod(targetPath, mode);
+  } catch (error) {
+    if (process.platform === "win32" && ["EINVAL", "ENOSYS", "EPERM"].includes(error.code)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+function isConfigObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readRepositories(repositories) {
@@ -88,6 +114,14 @@ function readString(value, fieldName) {
   }
 
   return value.trim();
+}
+
+function readBoolean(value, fieldName) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${fieldName} must be a boolean.`);
+  }
+
+  return value;
 }
 
 function readRequiredString(value, fieldName) {
