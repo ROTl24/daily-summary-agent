@@ -1,18 +1,16 @@
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
 
-let serviceProcess;
+const localOrigin = "http://127.0.0.1:8787";
 
-function startService() {
-  serviceProcess = spawn(
-    process.execPath,
-    [path.join(__dirname, "..", "src", "server", "main.mjs")],
-    {
-      stdio: "ignore",
-      windowsHide: true,
-    },
-  );
+let localServer;
+
+async function startServer() {
+  const { createHttpServer } = await import("../src/server/httpServer.mjs");
+  localServer = createHttpServer({
+    staticDirectory: path.join(__dirname, "..", "dist"),
+  });
+  await localServer.listen(8787);
 }
 
 function createWindow() {
@@ -28,24 +26,51 @@ function createWindow() {
     },
   });
 
-  window.loadURL("http://127.0.0.1:8787");
+  window.loadURL(localOrigin);
 }
 
-app.whenReady().then(() => {
-  startService();
-  createWindow();
+function registerIpcHandlers() {
+  ipcMain.handle("choose-directory", async (event) => {
+    assertTrustedSender(event);
 
-  ipcMain.handle("choose-directory", async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory"],
     });
 
     return result.canceled ? "" : result.filePaths[0];
   });
-});
+}
+
+function assertTrustedSender(event) {
+  const senderUrl = event.senderFrame?.url || event.sender.getURL();
+  if (senderUrl !== localOrigin && !senderUrl.startsWith(`${localOrigin}/`)) {
+    throw new Error("Blocked choose-directory request from an unexpected origin.");
+  }
+}
+
+async function startApp() {
+  registerIpcHandlers();
+  await startServer();
+  createWindow();
+}
+
+function closeLocalServer() {
+  if (!localServer) {
+    return;
+  }
+
+  const serverToClose = localServer;
+  localServer = undefined;
+  serverToClose.close().catch(() => {});
+}
+
+function showStartupError(error) {
+  dialog.showErrorBox("日报工作台启动失败", error.message || String(error));
+  app.quit();
+}
+
+app.whenReady().then(startApp).catch(showStartupError);
 
 app.on("before-quit", () => {
-  if (serviceProcess && !serviceProcess.killed) {
-    serviceProcess.kill();
-  }
+  closeLocalServer();
 });

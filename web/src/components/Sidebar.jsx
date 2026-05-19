@@ -33,23 +33,32 @@ export default function Sidebar({
   }, [keywordDrafts, onKeywordDraftDirtyChange, repositories]);
 
   function updateField(field, value) {
-    onChange({ ...config, [field]: value });
+    onChange((currentConfig) => ({ ...currentConfig, [field]: value }));
   }
 
   function addRepository() {
     setKeywordDrafts([...keywordDrafts, ""]);
-    onChange({
-      ...config,
-      repositories: [...repositories, { path: "", businessName: "", keywords: [] }],
-    });
+    onChange((currentConfig) => ({
+      ...currentConfig,
+      repositories: [
+        ...(Array.isArray(currentConfig.repositories) ? currentConfig.repositories : []),
+        { path: "", businessName: "", keywords: [] },
+      ],
+    }));
   }
 
   function updateRepository(index, patch) {
-    onChange({
-      ...config,
-      repositories: repositories.map((repository, repositoryIndex) =>
-        repositoryIndex === index ? { ...repository, ...patch } : repository,
-      ),
+    onChange((currentConfig) => {
+      const currentRepositories = Array.isArray(currentConfig.repositories)
+        ? currentConfig.repositories
+        : [];
+
+      return {
+        ...currentConfig,
+        repositories: currentRepositories.map((repository, repositoryIndex) =>
+          repositoryIndex === index ? { ...repository, ...patch } : repository,
+        ),
+      };
     });
   }
 
