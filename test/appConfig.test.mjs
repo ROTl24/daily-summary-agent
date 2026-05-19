@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -29,6 +29,35 @@ test("loadAppConfig returns safe defaults when config file is missing", async ()
   assert.equal(config.codexEnabled, false);
   assert.deepEqual(config.repositories, []);
   assert.match(config.outputDirectory, /Daily Reports$/);
+});
+
+test("loadAppConfig loads and normalizes an existing JSON config file", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "daily-config-"));
+  const configPath = path.join(root, "config.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      deepSeekApiKey: " secret ",
+      outputDirectory: ` ${path.join(root, "reports")} `,
+      codexEnabled: true,
+      repositories: [
+        {
+          path: ` ${path.join(root, "repo")} `,
+          businessName: " Project Alpha ",
+          keywords: [" agent-image "],
+        },
+      ],
+    }),
+    "utf8",
+  );
+
+  const config = await loadAppConfig({ configPath });
+
+  assert.equal(config.deepSeekApiKey, "secret");
+  assert.equal(config.outputDirectory, path.join(root, "reports"));
+  assert.equal(config.repositories[0].path, path.join(root, "repo"));
+  assert.equal(config.repositories[0].businessName, "Project Alpha");
+  assert.deepEqual(config.repositories[0].keywords, ["agent-image"]);
 });
 
 test("saveAppConfig persists normalized repositories and output directory", async () => {
@@ -63,5 +92,27 @@ test("validateAppConfig rejects repositories without keywords", () => {
         repositories: [{ path: "C:\\repo", businessName: "项目", keywords: [] }],
       }),
     /keywords/,
+  );
+});
+
+test("validateAppConfig rejects repositories without path", () => {
+  assert.throws(
+    () =>
+      validateAppConfig({
+        ...defaultConfig(),
+        repositories: [{ path: " ", businessName: "Project", keywords: ["agent-image"] }],
+      }),
+    /path/,
+  );
+});
+
+test("validateAppConfig rejects repositories without businessName", () => {
+  assert.throws(
+    () =>
+      validateAppConfig({
+        ...defaultConfig(),
+        repositories: [{ path: "C:\\repo", businessName: " ", keywords: ["agent-image"] }],
+      }),
+    /businessName/,
   );
 });
