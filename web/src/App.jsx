@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 
 import { collectEvidence, generateReport, getConfig, saveConfig, saveReport } from "./apiClient.js";
+import EvidencePanel from "./components/EvidencePanel.jsx";
+import MarkdownEditor from "./components/MarkdownEditor.jsx";
+import Sidebar from "./components/Sidebar.jsx";
 
 const emptyEvidence = {
+  date: "",
   repositoryActivities: [],
   codexSnippets: [],
   manualContext: "",
+  codexEnabled: false,
 };
 
 export default function App() {
@@ -101,41 +106,26 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <h1>日报工作台</h1>
-        <p className="muted">{status}</p>
-        <div className="debug-panel">
-          <pre>{JSON.stringify(config, null, 2)}</pre>
-        </div>
-        <button type="button" onClick={() => handleSaveConfig(config)}>
-          保存配置
-        </button>
-      </aside>
+      <Sidebar config={config} onChange={setConfig} onSave={handleSaveConfig} />
       <section className="workspace">
-        {error ? <div className="error">{error}</div> : null}
-        <label htmlFor="manual-context">手动补充</label>
-        <textarea
-          id="manual-context"
-          value={manualContext}
-          onChange={(event) => setManualContext(event.target.value)}
-          placeholder="补充今天的重要上下文..."
+        <div className="status-bar">
+          <span>{status}</span>
+          {error ? <strong>{error}</strong> : null}
+        </div>
+        <EvidencePanel
+          evidence={evidence}
+          manualContext={manualContext}
+          onManualContextChange={setManualContext}
+          onRefresh={handleCollectEvidence}
+          onGenerate={handleGenerate}
+          canGenerate={canGenerate}
         />
-        <button type="button" onClick={handleCollectEvidence}>
-          读取证据
-        </button>
-        <button type="button" onClick={handleGenerate} disabled={!canGenerate}>
-          生成日报
-        </button>
-        <label htmlFor="markdown-report">Markdown 日报</label>
-        <textarea
-          id="markdown-report"
-          value={markdown}
-          onChange={(event) => setMarkdown(event.target.value)}
-          placeholder="生成后的日报会显示在这里..."
+        <MarkdownEditor
+          markdown={markdown}
+          onChange={setMarkdown}
+          onSave={handleSaveReport}
+          canSave={canSave}
         />
-        <button type="button" onClick={() => handleSaveReport(false)} disabled={!canSave}>
-          保存日报
-        </button>
       </section>
     </main>
   );
