@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+reports/
+.superpowers/
+daily-summary.config.json
+.worktrees/

@@ -1,0 +1,9 @@
+{
+  "repositories": [
+    {
+      "path": "C:\\path\\to\\repo",
+      "businessName": "面向上级展示的项目名称",
+      "keywords": ["项目别名", "仓库名", "常用中文名称"]
+    }
+  ]
+}

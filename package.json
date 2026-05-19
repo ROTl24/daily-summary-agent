@@ -1,0 +1,15 @@
+{
+  "name": "daily-summary-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "daily": "node src/cli.mjs",
+    "test": "node --test",
+    "lint": "node scripts/check-syntax.mjs",
+    "build": "node scripts/check-syntax.mjs"
+  },
+  "bin": {
+    "daily-summary-agent": "src/cli.mjs"
+  }
+}
