@@ -96,7 +96,7 @@ export default function App() {
     try {
       setError("");
       setStatus("正在调用 DeepSeek...");
-      const result = await generateReport(evidence);
+      const result = await generateReport({ ...evidence, manualContext });
       setMarkdown(result.markdown);
       setStatus("日报已生成，可以编辑后保存。");
     } catch (generateError) {

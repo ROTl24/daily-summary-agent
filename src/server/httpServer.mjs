@@ -78,17 +78,20 @@ async function handleApiRequest(request, response, url, configPath) {
   }
 
   if (request.method === "PUT" && url.pathname === "/api/config") {
+    validateMutatingApiRequest(request);
     sendJson(response, 200, await saveAppConfig(await readJson(request), { configPath }));
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/repositories/validate") {
+    validateMutatingApiRequest(request);
     const body = await readJson(request);
     sendJson(response, 200, await validateRepositoryPath(body.path));
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/evidence") {
+    validateMutatingApiRequest(request);
     const body = await readJson(request);
     const config = await loadAppConfig({ configPath });
     sendJson(
@@ -100,6 +103,7 @@ async function handleApiRequest(request, response, url, configPath) {
   }
 
   if (request.method === "POST" && url.pathname === "/api/generate") {
+    validateMutatingApiRequest(request);
     const evidence = await readJson(request);
     const config = await loadAppConfig({ configPath });
     sendJson(response, 200, await generateReportFromEvidence({ config, evidence }));
@@ -107,6 +111,7 @@ async function handleApiRequest(request, response, url, configPath) {
   }
 
   if (request.method === "POST" && url.pathname === "/api/report/save") {
+    validateMutatingApiRequest(request);
     const body = await readJson(request);
     const config = await loadAppConfig({ configPath });
     sendJson(
@@ -123,6 +128,36 @@ async function handleApiRequest(request, response, url, configPath) {
   }
 
   sendJson(response, 404, { error: "Not found." });
+}
+
+function validateMutatingApiRequest(request) {
+  validateOrigin(request);
+  validateJsonContentType(request);
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.origin;
+  if (!origin) {
+    return;
+  }
+
+  const host = request.headers.host;
+  const allowedOrigins = new Set([
+    host ? `http://${host}` : "",
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+  ]);
+
+  if (!allowedOrigins.has(origin)) {
+    throw httpError(403, "Request origin is not allowed.");
+  }
+}
+
+function validateJsonContentType(request) {
+  const contentType = request.headers["content-type"] || "";
+  if (contentType.toLowerCase().split(";")[0].trim() !== "application/json") {
+    throw httpError(415, "Mutating API requests must use application/json.");
+  }
 }
 
 function readJson(request) {

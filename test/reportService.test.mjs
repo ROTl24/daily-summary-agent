@@ -94,3 +94,31 @@ test("saveReportFile refuses overwrite unless overwrite true", async () => {
   assert.equal(result.outputPath, outputPath);
   assert.equal(await readFile(result.outputPath, "utf8"), "new");
 });
+
+test("saveReportFile rejects dates that could escape the output directory", async () => {
+  const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "daily-summary-report-"));
+
+  await assert.rejects(
+    saveReportFile({
+      outputDirectory,
+      date: "..\\..\\Desktop\\pwn",
+      markdown: "new",
+      overwrite: true,
+    }),
+    /date must be YYYY-MM-DD/,
+  );
+});
+
+test("saveReportFile rejects invalid calendar dates", async () => {
+  const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "daily-summary-report-"));
+
+  await assert.rejects(
+    saveReportFile({
+      outputDirectory,
+      date: "2026-02-30",
+      markdown: "new",
+      overwrite: true,
+    }),
+    /date must be a valid calendar date/,
+  );
+});
