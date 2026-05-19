@@ -15,6 +15,8 @@ export default function App() {
   const [markdown, setMarkdown] = useState("");
   const [status, setStatus] = useState("正在加载配置...");
   const [error, setError] = useState("");
+  const canGenerate = Boolean(evidence.date);
+  const canSave = Boolean(evidence.date && markdown.trim());
 
   useEffect(() => {
     async function loadConfig() {
@@ -40,6 +42,7 @@ export default function App() {
       setStatus("配置已保存。");
     } catch (saveError) {
       setError(saveError.message);
+      setStatus("配置保存失败。");
     }
   }
 
@@ -52,10 +55,17 @@ export default function App() {
       setStatus("证据已更新，可以生成日报。");
     } catch (collectError) {
       setError(collectError.message);
+      setStatus("读取证据失败。");
     }
   }
 
   async function handleGenerate() {
+    if (!canGenerate) {
+      setError("请先读取证据，再生成日报。");
+      setStatus("生成日报失败。");
+      return;
+    }
+
     try {
       setError("");
       setStatus("正在调用 DeepSeek...");
@@ -64,16 +74,24 @@ export default function App() {
       setStatus("日报已生成，可以编辑后保存。");
     } catch (generateError) {
       setError(generateError.message);
+      setStatus("生成日报失败。");
     }
   }
 
   async function handleSaveReport(overwrite = false) {
+    if (!canSave) {
+      setError("请先生成包含日期和内容的日报，再保存。");
+      setStatus("保存日报失败。");
+      return;
+    }
+
     try {
       setError("");
       const result = await saveReport({ date: evidence.date, markdown, overwrite });
       setStatus(`已保存到 ${result.outputPath}`);
     } catch (saveError) {
       setError(saveError.message);
+      setStatus("保存日报失败。");
     }
   }
 
@@ -105,7 +123,7 @@ export default function App() {
         <button type="button" onClick={handleCollectEvidence}>
           读取证据
         </button>
-        <button type="button" onClick={handleGenerate}>
+        <button type="button" onClick={handleGenerate} disabled={!canGenerate}>
           生成日报
         </button>
         <label htmlFor="markdown-report">Markdown 日报</label>
@@ -115,7 +133,7 @@ export default function App() {
           onChange={(event) => setMarkdown(event.target.value)}
           placeholder="生成后的日报会显示在这里..."
         />
-        <button type="button" onClick={() => handleSaveReport(false)}>
+        <button type="button" onClick={() => handleSaveReport(false)} disabled={!canSave}>
           保存日报
         </button>
       </section>
