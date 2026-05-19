@@ -21,6 +21,25 @@ test("validateRepositoryPath returns readable error for non-git folders", async 
   assert.match(result.message, /not a Git repository/);
 });
 
+test("validateRepositoryPath returns readable error for blank paths", async () => {
+  const result = await validateRepositoryPath("  ");
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /choose a folder/i);
+});
+
+test("validateRepositoryPath returns readable error when Git is unavailable", async () => {
+  const runner = async () => {
+    const error = new Error("spawn git ENOENT");
+    error.code = "ENOENT";
+    throw error;
+  };
+  const result = await validateRepositoryPath("C:\\work\\repo", runner);
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Git is not installed/i);
+});
+
 test("collectEvidence combines git, manual context, and disabled Codex state", async () => {
   const repository = {
     path: path.join("C:", "work", "agent-image"),
@@ -91,4 +110,50 @@ test("collectEvidence calls Codex collector when enabled", async () => {
     { type: "git", repo: repository, date: "2026-05-20" },
     { type: "codex", date: "2026-05-20", repositories: [repository] },
   ]);
+});
+
+test("collectEvidence records one repository failure and continues collecting", async () => {
+  const failedRepository = {
+    path: path.join("C:", "work", "broken-repo"),
+    businessName: "Broken Repository",
+    keywords: ["broken-repo"],
+  };
+  const successfulRepository = {
+    path: path.join("C:", "work", "working-repo"),
+    businessName: "Working Repository",
+    keywords: ["working-repo"],
+  };
+  const gitCollector = async (repository) => {
+    if (repository === failedRepository) {
+      throw new Error("git log failed");
+    }
+
+    return {
+      repository,
+      commits: [{ subject: "feat: keep collecting", date: "2026-05-20T11:00:00+08:00" }],
+      pendingWork: { hasChanges: false, changedItemCount: 0, stats: "" },
+      errors: [],
+    };
+  };
+
+  const evidence = await collectEvidence({
+    config: {
+      repositories: [failedRepository, successfulRepository],
+      codexEnabled: false,
+    },
+    date: "2026-05-20",
+    manualContext: "  customer review finished  ",
+    gitCollector,
+  });
+
+  assert.equal(evidence.manualContext, "customer review finished");
+  assert.equal(evidence.repositoryActivities.length, 2);
+  assert.deepEqual(evidence.repositoryActivities[0], {
+    repository: failedRepository,
+    commits: [],
+    pendingWork: { hasChanges: false, changedItemCount: 0, stats: "" },
+    errors: ["git log failed"],
+  });
+  assert.equal(evidence.repositoryActivities[1].repository, successfulRepository);
+  assert.equal(evidence.repositoryActivities[1].commits[0].subject, "feat: keep collecting");
 });
