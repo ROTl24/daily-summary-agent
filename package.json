@@ -20,14 +20,20 @@
     "daily-summary-agent": "src/cli.mjs"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.0.4",
-    "vite": "^6.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.2.1",
     "electron": "^33.4.11",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "vite": "^6.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }
