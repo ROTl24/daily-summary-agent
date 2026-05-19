@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDeepSeekDailySummary } from "./deepseekWriter.mjs";
@@ -33,11 +33,15 @@ export async function saveReportFile({ outputDirectory, date, markdown, overwrit
   await mkdir(outputDirectory, { recursive: true });
   const outputPath = path.join(outputDirectory, `${date}-daily.md`);
 
-  if ((await exists(outputPath)) && !overwrite) {
-    throw new Error(`${outputPath} already exists.`);
+  try {
+    await writeFile(outputPath, markdown, overwrite ? "utf8" : { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    if (!overwrite && error?.code === "EEXIST") {
+      throw new Error(`${outputPath} already exists.`);
+    }
+    throw error;
   }
 
-  await writeFile(outputPath, markdown, "utf8");
   return { outputPath };
 }
 
@@ -53,16 +57,4 @@ function manualContextToSnippet(manualContext) {
     role: "user",
     source: "manual-context",
   };
-}
-
-async function exists(filePath) {
-  try {
-    await stat(filePath);
-    return true;
-  } catch (error) {
-    if (error?.code === "ENOENT") {
-      return false;
-    }
-    throw error;
-  }
 }
