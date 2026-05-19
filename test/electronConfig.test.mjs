@@ -7,6 +7,7 @@ test("electron-builder config targets Windows NSIS", async () => {
 
   assert.equal(config.appId, "com.daily-summary-agent.app");
   assert.deepEqual(config.win.target, ["nsis"]);
+  assert.equal(config.win.signAndEditExecutable, false);
   assert.equal(config.files.includes("dist/**"), true);
   assert.equal(config.files.includes("electron/**"), true);
   assert.equal(config.files.includes("src/**"), true);
