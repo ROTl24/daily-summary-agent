@@ -4,6 +4,7 @@ export default function EvidencePanel({
   onManualContextChange,
   onRefresh,
   onGenerate,
+  canCollect,
   canGenerate,
 }) {
   const activities = Array.isArray(evidence.repositoryActivities)
@@ -15,7 +16,7 @@ export default function EvidencePanel({
     <section className="panel evidence-panel">
       <div className="section-header">
         <h2>今日证据</h2>
-        <button type="button" onClick={onRefresh}>
+        <button type="button" onClick={onRefresh} disabled={!canCollect}>
           读取证据
         </button>
       </div>

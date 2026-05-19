@@ -162,6 +162,7 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -189,9 +190,18 @@ h3 {
 
 .warning,
 .error,
-.status-bar strong {
+.status-bar strong,
+.validation-message,
+.dirty-warning {
   color: #b45309;
   white-space: pre-wrap;
+}
+
+.validation-message,
+.dirty-warning {
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .manual-context {

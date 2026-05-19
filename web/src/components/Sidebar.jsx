@@ -1,11 +1,35 @@
-export default function Sidebar({ config, onChange, onSave }) {
+import { useEffect, useState } from "react";
+
+export default function Sidebar({
+  config,
+  onChange,
+  onSave,
+  isDirty,
+  onKeywordDraftDirtyChange,
+}) {
   const repositories = Array.isArray(config.repositories) ? config.repositories : [];
+  const [keywordDrafts, setKeywordDrafts] = useState(() =>
+    repositories.map((repository) => (repository.keywords || []).join(", ")),
+  );
+  const validationMessage = getValidationMessage(repositories);
+  const canSave = !validationMessage;
+
+  useEffect(() => {
+    onKeywordDraftDirtyChange(
+      repositories.some(
+        (repository, index) =>
+          (keywordDrafts[index] ?? (repository.keywords || []).join(", ")) !==
+          (repository.keywords || []).join(", "),
+      ),
+    );
+  }, [keywordDrafts, onKeywordDraftDirtyChange, repositories]);
 
   function updateField(field, value) {
     onChange({ ...config, [field]: value });
   }
 
   function addRepository() {
+    setKeywordDrafts([...keywordDrafts, ""]);
     onChange({
       ...config,
       repositories: [...repositories, { path: "", businessName: "", keywords: [] }],
@@ -21,7 +45,41 @@ export default function Sidebar({ config, onChange, onSave }) {
     });
   }
 
-  function readKeywords(value) {
+  function updateKeywordDraft(index, value) {
+    setKeywordDrafts(
+      keywordDrafts.map((keywordDraft, keywordIndex) =>
+        keywordIndex === index ? value : keywordDraft,
+      ),
+    );
+    updateRepository(index, { keywords: readKeywords(value) });
+  }
+
+  function normalizeKeywordDraft(index) {
+    const normalized = readKeywords(keywordDrafts[index] || "").join(", ");
+    setKeywordDrafts(
+      keywordDrafts.map((keywordDraft, keywordIndex) =>
+        keywordIndex === index ? normalized : keywordDraft,
+      ),
+    );
+  }
+
+  function normalizeConfigForSave() {
+    return {
+      ...config,
+      repositories: repositories.map((repository, index) => ({
+        ...repository,
+        keywords: readKeywords(keywordDrafts[index] ?? (repository.keywords || []).join(", ")),
+      })),
+    };
+  }
+
+  function handleSave() {
+    const nextConfig = normalizeConfigForSave();
+    setKeywordDrafts(nextConfig.repositories.map((repository) => repository.keywords.join(", ")));
+    onSave(nextConfig);
+  }
+
+  function readKeywords(value = "") {
     return value
       .split(",")
       .map((keyword) => keyword.trim())
@@ -89,20 +147,35 @@ export default function Sidebar({ config, onChange, onSave }) {
             <label>
               关键词
               <input
-                value={(repository.keywords || []).join(", ")}
-                onChange={(event) =>
-                  updateRepository(index, { keywords: readKeywords(event.target.value) })
-                }
+                value={keywordDrafts[index] ?? (repository.keywords || []).join(", ")}
+                onChange={(event) => updateKeywordDraft(index, event.target.value)}
+                onBlur={() => normalizeKeywordDraft(index)}
               />
             </label>
           </article>
         ))}
       </section>
 
-      <button className="primary" type="button" onClick={() => onSave(config)}>
+      {validationMessage ? <p className="validation-message">{validationMessage}</p> : null}
+      {isDirty ? <p className="dirty-warning">配置尚未保存，保存后才能读取证据。</p> : null}
+
+      <button className="primary" type="button" onClick={handleSave} disabled={!canSave}>
         保存配置
       </button>
       <p className="hint">API Key 只保存在本机配置文件里，不要提交配置文件。</p>
     </aside>
   );
+}
+
+function getValidationMessage(repositories) {
+  const invalidIndex = repositories.findIndex((repository) => {
+    const keywords = Array.isArray(repository.keywords) ? repository.keywords : [];
+    return !repository.path?.trim() || !repository.businessName?.trim() || keywords.length === 0;
+  });
+
+  if (invalidIndex === -1) {
+    return "";
+  }
+
+  return `第 ${invalidIndex + 1} 个仓库需要填写路径、业务名称和至少一个关键词。`;
 }

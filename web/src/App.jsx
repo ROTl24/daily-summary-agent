@@ -15,19 +15,27 @@ const emptyEvidence = {
 
 export default function App() {
   const [config, setConfig] = useState(null);
+  const [lastSavedConfig, setLastSavedConfig] = useState(null);
+  const [keywordDraftDirty, setKeywordDraftDirty] = useState(false);
   const [manualContext, setManualContext] = useState("");
   const [evidence, setEvidence] = useState(emptyEvidence);
   const [markdown, setMarkdown] = useState("");
   const [status, setStatus] = useState("正在加载配置...");
   const [error, setError] = useState("");
-  const canGenerate = Boolean(evidence.date);
-  const canSave = Boolean(evidence.date && markdown.trim());
+  const configDirty =
+    keywordDraftDirty ||
+    (Boolean(config && lastSavedConfig) &&
+      JSON.stringify(config) !== JSON.stringify(lastSavedConfig));
+  const canCollect = !configDirty;
+  const canGenerate = !configDirty && Boolean(evidence.date);
+  const canSave = !configDirty && Boolean(evidence.date && markdown.trim());
 
   useEffect(() => {
     async function loadConfig() {
       try {
         const nextConfig = await getConfig();
         setConfig(nextConfig);
+        setLastSavedConfig(nextConfig);
         setStatus(
           nextConfig.repositories?.length ? "配置已加载。" : "添加第一个仓库开始使用。",
         );
@@ -44,6 +52,8 @@ export default function App() {
       setError("");
       const savedConfig = await saveConfig(nextConfig);
       setConfig(savedConfig);
+      setLastSavedConfig(savedConfig);
+      setKeywordDraftDirty(false);
       setStatus("配置已保存。");
     } catch (saveError) {
       setError(saveError.message);
@@ -52,6 +62,12 @@ export default function App() {
   }
 
   async function handleCollectEvidence() {
+    if (configDirty) {
+      setError("配置有未保存修改，请先保存配置再读取证据。");
+      setStatus("请先保存配置。");
+      return;
+    }
+
     try {
       setError("");
       setStatus("正在读取今日证据...");
@@ -65,6 +81,12 @@ export default function App() {
   }
 
   async function handleGenerate() {
+    if (configDirty) {
+      setError("配置有未保存修改，请先保存配置再生成日报。");
+      setStatus("生成日报失败。");
+      return;
+    }
+
     if (!canGenerate) {
       setError("请先读取证据，再生成日报。");
       setStatus("生成日报失败。");
@@ -84,6 +106,12 @@ export default function App() {
   }
 
   async function handleSaveReport(overwrite = false) {
+    if (configDirty) {
+      setError("配置有未保存修改，请先保存配置再保存日报。");
+      setStatus("保存日报失败。");
+      return;
+    }
+
     if (!canSave) {
       setError("请先生成包含日期和内容的日报，再保存。");
       setStatus("保存日报失败。");
@@ -106,11 +134,20 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <Sidebar config={config} onChange={setConfig} onSave={handleSaveConfig} />
+      <Sidebar
+        config={config}
+        onChange={setConfig}
+        onSave={handleSaveConfig}
+        isDirty={configDirty}
+        onKeywordDraftDirtyChange={setKeywordDraftDirty}
+      />
       <section className="workspace">
         <div className="status-bar">
           <span>{status}</span>
           {error ? <strong>{error}</strong> : null}
+          {configDirty ? (
+            <strong>配置有未保存修改，请先保存配置再读取证据、生成或保存日报。</strong>
+          ) : null}
         </div>
         <EvidencePanel
           evidence={evidence}
@@ -118,6 +155,7 @@ export default function App() {
           onManualContextChange={setManualContext}
           onRefresh={handleCollectEvidence}
           onGenerate={handleGenerate}
+          canCollect={canCollect}
           canGenerate={canGenerate}
         />
         <MarkdownEditor
