@@ -244,3 +244,33 @@ h3 {
   place-items: center;
   color: #475569;
 }
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #d8dee8;
+    padding: 20px;
+  }
+
+  .workspace {
+    grid-template-rows: auto;
+    padding: 16px;
+  }
+
+  .path-picker-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section-header,
+  .status-bar {
+    align-items: flex-start;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+}
