@@ -3,5 +3,6 @@ dist/
 release/
 reports/
 .superpowers/
+docs/superpowers/
 daily-summary.config.json
 .worktrees/
