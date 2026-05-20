@@ -6,8 +6,8 @@ Daily Summary Agent 是一个 Windows 本地日报生成工具。它会读取你
 
 请到 [Releases](https://github.com/ROTl24/daily-summary-agent/releases/latest) 下载 Windows 版本：
 
-- `Daily Summary Agent 0.1.0.exe`：免安装版，下载后双击运行。
-- `Daily Summary Agent Setup 0.1.0.exe`：安装版，适合长期使用。
+- `Daily.Summary.Agent.0.1.0.exe`：免安装版，下载后双击运行。
+- `Daily.Summary.Agent.Setup.0.1.0.exe`：安装版，适合长期使用。
 
 ## 适合谁用
 
