@@ -9,16 +9,13 @@ export async function generateReportFromEvidence({ config, evidence, fetchImpl =
     throw new Error("DeepSeek API key is required before generating a report.");
   }
 
-  const manualContextSnippet = manualContextToSnippet(evidence.manualContext);
-  const codexSnippets = manualContextSnippet
-    ? [...evidence.codexSnippets, manualContextSnippet]
-    : evidence.codexSnippets;
-
   const summary = await createDeepSeekDailySummary({
     apiKey: config.deepSeekApiKey,
     date: evidence.date,
     repositoryActivities: evidence.repositoryActivities,
-    codexSnippets,
+    codexSnippets: evidence.codexSnippets,
+    manualContext: evidence.manualContext,
+    thinkingDepth: config.thinkingDepth,
     fetchImpl,
   });
 
@@ -80,16 +77,3 @@ function isPathInside(parentDirectory, filePath) {
   return Boolean(relative) && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
-function manualContextToSnippet(manualContext) {
-  const text = String(manualContext || "").trim();
-  if (!text) {
-    return null;
-  }
-
-  return {
-    text,
-    matchedRepositories: [],
-    role: "user",
-    source: "manual-context",
-  };
-}

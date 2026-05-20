@@ -116,3 +116,70 @@ test("collectCodexSessions conservatively includes only explicit keyword matches
     ["日报工具需要把未提交内容放进待跟进。"],
   );
 });
+
+test("collectCodexSessions keeps only work-like messages even when session cwd is inside repository", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "codex-home-"));
+  const sessionDir = path.join(root, "sessions", "2026", "05", "20");
+  await mkdir(sessionDir, { recursive: true });
+
+  const repoPath = path.join(root, "daily-summary-agent");
+  const sessionPath = path.join(sessionDir, "rollout-2026-05-20T09-00-00-demo.jsonl");
+  await writeFile(
+    sessionPath,
+    [
+      JSON.stringify({
+        timestamp: "2026-05-20T01:00:00.000Z",
+        type: "session_meta",
+        payload: { id: "session-3", cwd: repoPath },
+      }),
+      JSON.stringify({
+        timestamp: "2026-05-20T01:01:00.000Z",
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "先看一下项目结构。" }],
+        },
+      }),
+      JSON.stringify({
+        timestamp: "2026-05-20T01:02:00.000Z",
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "修复网页版选择按钮点击没有反应的问题。" }],
+        },
+      }),
+      JSON.stringify({
+        timestamp: "2026-05-20T01:03:00.000Z",
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "已修复选择按钮在浏览器环境中静默无效的问题，并通过 pnpm test 验证。" }],
+        },
+      }),
+    ].join("\n"),
+    "utf8",
+  );
+
+  const snippets = await collectCodexSessions({
+    codexHome: root,
+    date: "2026-05-20",
+    repositories: [
+      {
+        path: repoPath,
+        businessName: "日报 Agent",
+        keywords: ["daily-summary-agent"],
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    snippets.map((snippet) => snippet.text),
+    [
+      "修复网页版选择按钮点击没有反应的问题。",
+      "已修复选择按钮在浏览器环境中静默无效的问题，并通过 pnpm test 验证。",
+    ],
+  );
+});

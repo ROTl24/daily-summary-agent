@@ -1,11 +1,18 @@
-export default function MarkdownEditor({ markdown, onChange, onSave, canSave }) {
+export default function MarkdownEditor({ markdown, onChange, onSave, canSave, canOverwrite }) {
   return (
     <section className="panel markdown-panel">
       <div className="section-header">
         <h2>Markdown 日报</h2>
-        <button type="button" onClick={() => onSave(false)} disabled={!canSave}>
-          保存
-        </button>
+        <div className="save-actions">
+          <button type="button" onClick={() => onSave(false)} disabled={!canSave}>
+            保存
+          </button>
+          {canOverwrite ? (
+            <button className="primary" type="button" onClick={() => onSave(true)}>
+              覆盖保存
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <textarea

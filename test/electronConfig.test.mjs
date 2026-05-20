@@ -18,7 +18,9 @@ test("electron main starts the local server without spawning another process", a
   const mainSource = await readFile("electron/main.cjs", "utf8");
 
   assert.match(mainSource, /createHttpServer/);
-  assert.match(mainSource, /await\s+localServer\.listen\(8787\)/);
+  assert.match(mainSource, /await\s+localServer\.listen\(0\)/);
+  assert.match(mainSource, /localOrigin\s*=\s*`http:\/\/127\.0\.0\.1:\$\{localServer\.port\}`/);
+  assert.doesNotMatch(mainSource, /listen\(8787\)/);
   assert.doesNotMatch(mainSource, /\bspawn\s*\(/);
   assert.match(mainSource, /ipcMain\.handle\("choose-directory"/);
 });

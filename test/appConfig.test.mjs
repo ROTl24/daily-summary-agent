@@ -26,7 +26,9 @@ test("loadAppConfig returns safe defaults when config file is missing", async ()
   const config = await loadAppConfig({ configPath: path.join(root, "config.json") });
 
   assert.equal(config.deepSeekApiKey, "");
+  assert.equal(config.gitEnabled, true);
   assert.equal(config.codexEnabled, false);
+  assert.equal(config.thinkingDepth, "disabled");
   assert.deepEqual(config.repositories, []);
   assert.match(config.outputDirectory, /Daily Reports$/);
 });
@@ -39,7 +41,9 @@ test("loadAppConfig loads and normalizes an existing JSON config file", async ()
     JSON.stringify({
       deepSeekApiKey: " secret ",
       outputDirectory: ` ${path.join(root, "reports")} `,
+      gitEnabled: false,
       codexEnabled: true,
+      thinkingDepth: " high ",
       repositories: [
         {
           path: ` ${path.join(root, "repo")} `,
@@ -55,6 +59,8 @@ test("loadAppConfig loads and normalizes an existing JSON config file", async ()
 
   assert.equal(config.deepSeekApiKey, "secret");
   assert.equal(config.outputDirectory, path.join(root, "reports"));
+  assert.equal(config.gitEnabled, false);
+  assert.equal(config.thinkingDepth, "high");
   assert.equal(config.repositories[0].path, path.join(root, "repo"));
   assert.equal(config.repositories[0].businessName, "Project Alpha");
   assert.deepEqual(config.repositories[0].keywords, ["agent-image"]);
@@ -66,7 +72,9 @@ test("saveAppConfig persists normalized repositories and output directory", asyn
   const config = validateAppConfig({
     deepSeekApiKey: "secret",
     outputDirectory: path.join(root, "reports"),
+    gitEnabled: false,
     codexEnabled: true,
+    thinkingDepth: "max",
     repositories: [
       {
         path: path.join(root, "repo"),
@@ -81,6 +89,8 @@ test("saveAppConfig persists normalized repositories and output directory", asyn
 
   assert.equal(saved.deepSeekApiKey, "secret");
   assert.equal(saved.outputDirectory, path.join(root, "reports"));
+  assert.equal(saved.gitEnabled, false);
+  assert.equal(saved.thinkingDepth, "max");
   assert.equal(saved.repositories[0].businessName, "AI 电商详情图生成平台");
 });
 
@@ -142,6 +152,28 @@ test("validateAppConfig rejects non-boolean codexEnabled values", () => {
         codexEnabled: "true",
       }),
     /codexEnabled/,
+  );
+});
+
+test("validateAppConfig rejects non-boolean gitEnabled values", () => {
+  assert.throws(
+    () =>
+      validateAppConfig({
+        ...defaultConfig(),
+        gitEnabled: "true",
+      }),
+    /gitEnabled/,
+  );
+});
+
+test("validateAppConfig rejects unsupported thinking depth values", () => {
+  assert.throws(
+    () =>
+      validateAppConfig({
+        ...defaultConfig(),
+        thinkingDepth: "medium",
+      }),
+    /thinkingDepth/,
   );
 });
 

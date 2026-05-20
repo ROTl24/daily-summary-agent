@@ -1,6 +1,15 @@
 import { execFile } from "node:child_process";
 
+const NOT_GIT_REPOSITORY_ERROR =
+  "Selected folder is not a Git repository. Choose a Git repository folder or turn off Git reading.";
+const GIT_UNAVAILABLE_ERROR = "Git is not installed or is not available on PATH.";
+
 export async function collectRepositoryActivity(repository, range, runner = runCommand) {
+  const repositoryError = await validateRepository(repository, runner);
+  if (repositoryError) {
+    return emptyActivity(repository, [repositoryError]);
+  }
+
   const errors = [];
   const commits = await collectCommits(repository, range, runner, errors);
   const pendingWork = await collectPendingWork(repository, runner, errors);
@@ -9,6 +18,32 @@ export async function collectRepositoryActivity(repository, range, runner = runC
     repository,
     commits,
     pendingWork,
+    errors,
+  };
+}
+
+async function validateRepository(repository, runner) {
+  try {
+    const { stdout } = await runner("git", ["-C", repository.path, "rev-parse", "--is-inside-work-tree"]);
+    return stdout.trim() === "true" ? "" : NOT_GIT_REPOSITORY_ERROR;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return GIT_UNAVAILABLE_ERROR;
+    }
+
+    if (isNotGitRepositoryError(error)) {
+      return NOT_GIT_REPOSITORY_ERROR;
+    }
+
+    return formatError("git rev-parse", error);
+  }
+}
+
+function emptyActivity(repository, errors) {
+  return {
+    repository,
+    commits: [],
+    pendingWork: { hasChanges: false, changedItemCount: 0, stats: "" },
     errors,
   };
 }
@@ -89,6 +124,17 @@ function runCommand(command, args) {
 }
 
 function formatError(command, error) {
-  const detail = error.stderr?.trim() || error.message;
+  const detail = firstErrorLine(error.stderr) || error.message;
   return `${command}: ${detail}`;
+}
+
+function firstErrorLine(stderr = "") {
+  return String(stderr)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+}
+
+function isNotGitRepositoryError(error) {
+  return /not a git repository/i.test(`${error.stderr || ""}\n${error.message || ""}`);
 }

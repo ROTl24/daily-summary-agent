@@ -1,19 +1,23 @@
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 
-const localOrigin = "http://127.0.0.1:8787";
-
 let localServer;
+let localOrigin = "";
 
 async function startServer() {
   const { createHttpServer } = await import("../src/server/httpServer.mjs");
   localServer = createHttpServer({
     staticDirectory: path.join(__dirname, "..", "dist"),
   });
-  await localServer.listen(8787);
+  await localServer.listen(0);
+  localOrigin = `http://127.0.0.1:${localServer.port}`;
 }
 
 function createWindow() {
+  if (!localOrigin) {
+    throw new Error("Local server did not provide a startup URL.");
+  }
+
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -42,6 +46,10 @@ function registerIpcHandlers() {
 }
 
 function assertTrustedSender(event) {
+  if (!localOrigin) {
+    throw new Error("Local server origin is not ready.");
+  }
+
   const senderUrl = event.senderFrame?.url || event.sender.getURL();
   if (senderUrl !== localOrigin && !senderUrl.startsWith(`${localOrigin}/`)) {
     throw new Error("Blocked choose-directory request from an unexpected origin.");

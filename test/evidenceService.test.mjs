@@ -65,6 +65,7 @@ test("collectEvidence combines git, manual context, and disabled Codex state", a
 
   assert.equal(evidence.date, "2026-05-20");
   assert.equal(evidence.repositoryActivities.length, 1);
+  assert.equal(evidence.gitEnabled, true);
   assert.equal(evidence.codexSnippets.length, 0);
   assert.equal(evidence.codexEnabled, false);
   assert.match(evidence.manualContext, /客户沟通/);
@@ -104,12 +105,51 @@ test("collectEvidence calls Codex collector when enabled", async () => {
 
   assert.equal(evidence.date, "2026-05-20");
   assert.equal(evidence.manualContext, "finished review");
+  assert.equal(evidence.gitEnabled, true);
   assert.equal(evidence.codexEnabled, true);
   assert.deepEqual(evidence.codexSnippets, [{ text: "reviewed task plan", matchedRepositories: ["日报 Agent"] }]);
   assert.deepEqual(calls, [
     { type: "git", repo: repository, date: "2026-05-20" },
     { type: "codex", date: "2026-05-20", repositories: [repository] },
   ]);
+});
+
+test("collectEvidence lets Git and Codex be selected independently", async () => {
+  const repository = {
+    path: path.join("C:", "work", "daily-summary-agent"),
+    businessName: "日报 Agent",
+    keywords: ["daily-summary-agent"],
+  };
+  const calls = [];
+  const gitCollector = async () => {
+    calls.push({ type: "git" });
+    throw new Error("git collector should not run");
+  };
+  const codexCollector = async ({ date, repositories }) => {
+    calls.push({ type: "codex", date, repositories });
+    return [{ text: "reviewed task plan", matchedRepositories: ["日报 Agent"] }];
+  };
+
+  const evidence = await collectEvidence({
+    config: {
+      repositories: [repository],
+      gitEnabled: false,
+      codexEnabled: true,
+    },
+    date: "2026-05-20",
+    manualContext: "  manual update  ",
+    gitCollector,
+    codexCollector,
+  });
+
+  assert.equal(evidence.gitEnabled, false);
+  assert.equal(evidence.codexEnabled, true);
+  assert.equal(evidence.manualContext, "manual update");
+  assert.deepEqual(evidence.repositoryActivities, []);
+  assert.deepEqual(evidence.codexSnippets, [
+    { text: "reviewed task plan", matchedRepositories: ["日报 Agent"] },
+  ]);
+  assert.deepEqual(calls, [{ type: "codex", date: "2026-05-20", repositories: [repository] }]);
 });
 
 test("collectEvidence records one repository failure and continues collecting", async () => {

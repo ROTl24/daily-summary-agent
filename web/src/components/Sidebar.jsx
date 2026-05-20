@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 
 async function chooseDirectory() {
-  if (typeof window === "undefined" || !window.dailySummary?.chooseDirectory) {
+  if (!canChooseDirectory()) {
     return "";
   }
 
   return window.dailySummary.chooseDirectory();
+}
+
+function canChooseDirectory() {
+  return typeof window !== "undefined" && Boolean(window.dailySummary?.chooseDirectory);
 }
 
 export default function Sidebar({
@@ -21,6 +25,9 @@ export default function Sidebar({
   );
   const validationMessage = getValidationMessage(repositories);
   const canSave = !validationMessage;
+  const directoryPickerAvailable = canChooseDirectory();
+  const directoryPickerUnavailableMessage =
+    "选择文件夹仅在桌面版中可用；浏览器中请手动输入路径。";
 
   useEffect(() => {
     onKeywordDraftDirtyChange(
@@ -117,6 +124,18 @@ export default function Sidebar({
       </label>
 
       <label>
+        DeepSeek 思考深度
+        <select
+          value={config.thinkingDepth || "disabled"}
+          onChange={(event) => updateField("thinkingDepth", event.target.value)}
+        >
+          <option value="disabled">关闭（速度优先）</option>
+          <option value="high">高（质量优先）</option>
+          <option value="max">最高（复杂日报）</option>
+        </select>
+      </label>
+
+      <label>
         日报输出目录
         <div className="path-picker-row">
           <input
@@ -125,6 +144,8 @@ export default function Sidebar({
           />
           <button
             type="button"
+            disabled={!directoryPickerAvailable}
+            title={directoryPickerAvailable ? "选择文件夹" : directoryPickerUnavailableMessage}
             onClick={async () => {
               const directory = await chooseDirectory();
               if (directory) {
@@ -135,6 +156,18 @@ export default function Sidebar({
             选择
           </button>
         </div>
+      </label>
+      {!directoryPickerAvailable ? (
+        <p className="picker-hint">{directoryPickerUnavailableMessage}</p>
+      ) : null}
+
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={config.gitEnabled !== false}
+          onChange={(event) => updateField("gitEnabled", event.target.checked)}
+        />
+        读取 Git 今日提交和未提交变更
       </label>
 
       <label className="checkbox-row">
@@ -167,6 +200,10 @@ export default function Sidebar({
                 />
                 <button
                   type="button"
+                  disabled={!directoryPickerAvailable}
+                  title={
+                    directoryPickerAvailable ? "选择文件夹" : directoryPickerUnavailableMessage
+                  }
                   onClick={async () => {
                     const directory = await chooseDirectory();
                     if (directory) {

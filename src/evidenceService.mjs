@@ -39,10 +39,13 @@ export async function collectEvidence({
 }) {
   const range = getLocalDayRange(date);
   const repositories = config.repositories || [];
+  const gitEnabled = config.gitEnabled !== false;
   const repositoryActivities = [];
 
-  for (const repository of repositories) {
-    repositoryActivities.push(await collectRepositoryEvidence(gitCollector, repository, range));
+  if (gitEnabled) {
+    for (const repository of repositories) {
+      repositoryActivities.push(await collectRepositoryEvidence(gitCollector, repository, range));
+    }
   }
 
   const codexEnabled = config.codexEnabled === true;
@@ -53,6 +56,7 @@ export async function collectEvidence({
   return {
     date: range.date,
     manualContext: String(manualContext).trim(),
+    gitEnabled,
     codexEnabled,
     repositoryActivities,
     codexSnippets,

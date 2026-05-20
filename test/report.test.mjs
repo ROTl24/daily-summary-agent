@@ -50,6 +50,37 @@ test("renderReport creates manager-friendly sections without source notes or cod
   assert.doesNotMatch(markdown, /diff/i);
 });
 
+test("renderReport renders each structured STAR item as a natural paragraph", () => {
+  const markdown = renderReport({
+    date: "2026-05-20",
+    sections: [
+      {
+        heading: "本地日报工作台搭建",
+        items: [
+          {
+            title: "完成本地日报工作台基础框架搭建",
+            situation: "日报整理依赖手工汇总，缺少统一的本地工作入口。",
+            task: "搭建可继续扩展的本地日报工作台基础能力。",
+            action: "完成配置管理、服务层和界面基础结构。",
+            result: "形成了后续证据收集和报告生成的基础框架。",
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.match(markdown, /1\.完成本地日报工作台基础框架搭建/);
+  assert.match(markdown, /日报整理依赖手工汇总/);
+  assert.match(markdown, /搭建可继续扩展/);
+  assert.match(markdown, /完成配置管理/);
+  assert.match(markdown, /形成了后续证据收集/);
+  assert.doesNotMatch(markdown, /S（背景）/);
+  assert.doesNotMatch(markdown, /T（任务）/);
+  assert.doesNotMatch(markdown, /A（行动）/);
+  assert.doesNotMatch(markdown, /R（结果）/);
+  assert.doesNotMatch(markdown, /\[object Object\]/);
+});
+
 test("renderReport formats mixed Chinese and English project names naturally", () => {
   const summary = createDailySummary({
     date: "2026-05-19",

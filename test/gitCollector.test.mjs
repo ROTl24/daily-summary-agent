@@ -9,6 +9,9 @@ test("collectRepositoryActivity parses commits and pending work", async () => {
   const runner = async (command, args) => {
     calls.push([command, args]);
     const joined = args.join(" ");
+    if (joined.includes(" rev-parse ")) {
+      return { stdout: "true\n" };
+    }
     if (joined.includes(" log ")) {
       return {
         stdout: [
@@ -44,7 +47,39 @@ test("collectRepositoryActivity parses commits and pending work", async () => {
   assert.equal(activity.pendingWork.hasChanges, true);
   assert.equal(activity.pendingWork.changedItemCount, 2);
   assert.equal(activity.errors.length, 0);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
+});
+
+test("collectRepositoryActivity reports non-git folders without noisy git diff usage", async () => {
+  const calls = [];
+  const activity = await collectRepositoryActivity(
+    {
+      path: path.join("C:", "Users", "Administrator", "Desktop", "日报测试"),
+      businessName: "每日日报撰写",
+      keywords: ["日报工作台"],
+    },
+    {
+      since: new Date("2026-05-20T00:00:00+08:00"),
+      until: new Date("2026-05-20T23:59:59+08:00"),
+    },
+    async (command, args) => {
+      calls.push([command, args]);
+      const error = new Error("fatal: not a git repository");
+      error.stderr = [
+        "fatal: not a git repository (or any of the parent directories): .git",
+        "usage: git diff --no-index [<options>] <path> <path> [<pathspec>...]",
+      ].join("\n");
+      throw error;
+    },
+  );
+
+  assert.equal(activity.commits.length, 0);
+  assert.equal(activity.pendingWork.hasChanges, false);
+  assert.deepEqual(activity.errors, [
+    "Selected folder is not a Git repository. Choose a Git repository folder or turn off Git reading.",
+  ]);
+  assert.equal(calls.length, 1);
+  assert.doesNotMatch(activity.errors.join("\n"), /usage: git diff/);
 });
 
 test("collectRepositoryActivity records git errors without throwing", async () => {
@@ -59,11 +94,13 @@ test("collectRepositoryActivity records git errors without throwing", async () =
       until: new Date("2026-05-19T23:59:59+08:00"),
     },
     async () => {
-      throw new Error("not a git repository");
+      const error = new Error("unexpected git failure");
+      error.stderr = "unexpected git failure";
+      throw error;
     },
   );
 
   assert.equal(activity.commits.length, 0);
   assert.equal(activity.pendingWork.hasChanges, false);
-  assert.equal(activity.errors.length, 3);
+  assert.deepEqual(activity.errors, ["git rev-parse: unexpected git failure"]);
 });

@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 const appDirectoryName = "DailySummaryAgent";
+const thinkingDepthValues = new Set(["disabled", "high", "max"]);
 
 export function getConfigPath({
   appData = process.env.APPDATA,
@@ -21,7 +22,9 @@ export function defaultConfig({ home = os.homedir() } = {}) {
   return {
     deepSeekApiKey: "",
     outputDirectory: path.join(home, "Documents", "Daily Reports"),
+    gitEnabled: true,
     codexEnabled: false,
+    thinkingDepth: "disabled",
     repositories: [],
   };
 }
@@ -65,7 +68,9 @@ export function validateAppConfig(value) {
   return {
     deepSeekApiKey: readString(config.deepSeekApiKey, "deepSeekApiKey"),
     outputDirectory: readRequiredString(config.outputDirectory, "outputDirectory"),
+    gitEnabled: readBoolean(config.gitEnabled, "gitEnabled"),
     codexEnabled: readBoolean(config.codexEnabled, "codexEnabled"),
+    thinkingDepth: readThinkingDepth(config.thinkingDepth),
     repositories: readRepositories(config.repositories),
   };
 }
@@ -122,6 +127,15 @@ function readBoolean(value, fieldName) {
   }
 
   return value;
+}
+
+function readThinkingDepth(value) {
+  const text = readString(value, "thinkingDepth");
+  if (!thinkingDepthValues.has(text)) {
+    throw new Error("thinkingDepth must be one of: disabled, high, max.");
+  }
+
+  return text;
 }
 
 function readRequiredString(value, fieldName) {

@@ -55,7 +55,7 @@ test("generateReportFromEvidence sends manual context with evidence", async () =
   };
 
   const result = await generateReportFromEvidence({
-    config: { deepSeekApiKey: "test-key" },
+    config: { deepSeekApiKey: "test-key", thinkingDepth: "high" },
     evidence: {
       ...baseEvidence,
       manualContext: "完成客户沟通并确认下一版方向。",
@@ -66,7 +66,11 @@ test("generateReportFromEvidence sends manual context with evidence", async () =
   assert.match(result.markdown, /2026-05-20 日报/);
   assert.match(result.markdown, /完成客户沟通/);
   assert.equal(calls.length, 1);
-  assert.match(JSON.parse(calls[0].options.body).messages[1].content, /完成客户沟通并确认下一版方向。/);
+  const body = JSON.parse(calls[0].options.body);
+  assert.match(body.messages[1].content, /完成客户沟通并确认下一版方向。/);
+  assert.match(body.messages[1].content, /"manualContext"/);
+  assert.deepEqual(body.thinking, { type: "enabled" });
+  assert.equal(body.reasoning_effort, "high");
 });
 
 test("saveReportFile refuses overwrite unless overwrite true", async () => {

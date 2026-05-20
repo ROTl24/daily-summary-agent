@@ -86,7 +86,12 @@ async function readSessionSnippets(sessionFile, repositories, threadNames) {
     }
 
     for (const text of extractCleanTextParts(record.payload.content)) {
-      const matchedRepositories = matchRepositories({ text, cwd: sessionCwd, repositories });
+      const cleanText = normalizeSnippetText(text);
+      if (!isWorkCandidate(cleanText, record.payload.role)) {
+        continue;
+      }
+
+      const matchedRepositories = matchRepositories({ text: cleanText, cwd: sessionCwd, repositories });
       if (matchedRepositories.length === 0) {
         continue;
       }
@@ -97,7 +102,7 @@ async function readSessionSnippets(sessionFile, repositories, threadNames) {
         cwd: sessionCwd,
         role: record.payload.role,
         timestamp: record.timestamp || "",
-        text,
+        text: truncateSnippet(cleanText),
         matchedRepositories: matchedRepositories.map((repository) => repository.businessName),
       });
     }
@@ -120,11 +125,49 @@ function extractCleanTextParts(content) {
 function isInjectedContext(text) {
   return [
     "# AGENTS.md instructions",
+    "# Diff comments:",
+    "# In app browser:",
     "<environment_context>",
     "<plugins_instructions>",
     "<skills_instructions>",
     "<INSTRUCTIONS>",
+    "Untrusted page evidence",
+    "Target selector:",
   ].some((marker) => text.includes(marker));
+}
+
+function normalizeSnippetText(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, "代码或日志内容已省略。")
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isWorkCandidate(text, role) {
+  if (!text || text.length < 4) {
+    return false;
+  }
+
+  if (role === "user") {
+    return userWorkSignalPattern.test(text);
+  }
+
+  return assistantWorkSignalPattern.test(text);
+}
+
+const userWorkSignalPattern =
+  /修复|实现|新增|添加|优化|完善|调整|更新|生成|搭建|打包|部署|测试|构建|验证|排查|定位|设计|规划|梳理|确认|明确|分析|解决|日报|STAR|DeepSeek|Codex|关键词|按钮|网页版|Electron|prompt|提示词|待跟进|提交|PR|lint|build|test|pnpm/i;
+
+const assistantWorkSignalPattern =
+  /已(?:经)?(?:修复|完成|实现|调整|更新|生成|通过|验证|新增|补充|加固|优化|打包|构建)|验证结果|测试通过|构建通过|lint|pnpm (?:lint|test|build)|pass(?:ed)?|明确|通过/i;
+
+function truncateSnippet(text, limit = 600) {
+  if (text.length <= limit) {
+    return text;
+  }
+
+  return `${text.slice(0, limit).trim()}...`;
 }
 
 function matchRepositories({ text, cwd, repositories }) {
