@@ -2,7 +2,12 @@ node_modules/
 dist/
 release/
 reports/
+.playwright-cli/
 .superpowers/
 docs/superpowers/
 daily-summary.config.json
 .worktrees/
+.env
+.env.*
+!.env.example
+*.log
