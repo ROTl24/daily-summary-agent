@@ -14,7 +14,7 @@
     "lint": "node scripts/check-syntax.mjs",
     "build": "vite build && node scripts/check-syntax.mjs",
     "electron": "pnpm build && electron .",
-    "package:win": "pnpm build && electron-builder --win nsis"
+    "package:win": "pnpm build && electron-builder --win"
   },
   "bin": {
     "daily-summary-agent": "src/cli.mjs"
